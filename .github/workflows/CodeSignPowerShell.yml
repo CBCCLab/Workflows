@@ -98,7 +98,7 @@ jobs:
                "Content-Type"  = "application/json"
           }
 
-          $MsgFrom = “AdeleV@l8qp.onmicrosoft.com”
+          $MsgFrom = "AdeleV@l8qp.onmicrosoft.com"
 
           ForEach ($email in $uniqueEmails) 
           {
