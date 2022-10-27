@@ -34,7 +34,9 @@ jobs:
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
-          $email = git log --format='%ae' ${{github.sha}} --first-parent
+          $email = git log --format='%ae' ${{github.sha}}
+          git log > log.txt
+          Move-Item -Path log.txt -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
           Write-Host $email
           $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           #Get differences between last commit and this one.
