@@ -6,10 +6,6 @@ permissions:
 
 on:
   workflow_call:
-  
-env:
-  AzureClientID: ${{ secrets.AzureKeyVaultClientId }}
-  AzureTenantID: ${{ secrets.AzureKeyVaultTenant }}
 
 jobs:
   sign_scripts:
@@ -83,13 +79,14 @@ jobs:
           $uniqueEmails = $emails.split(" ") | Sort-Object | Get-Unique
 
           $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
-          $tenantID = ($env.AzureTenantID | ConvertFrom-Json -AsHashtable)
+          $tenantID = "${{ secrets.AzureKeyVaultTenant }}"
+          $clientID = "${{ secrets.AZUREKEYVAULTCLIENTID }}"
     
           $tokenBody = @{
     
           Grant_Type    = 'client_credentials'
           Scope         = 'https://graph.microsoft.com/.default'
-          Client_Id     = ($env:AzureClientID | ConvertFrom-Json -AsHashtable)
+          Client_Id     = "${{ secrets.AZUREKEYVAULTCLIENTID }}"
           Client_Secret = $clientSecret
           }
     
