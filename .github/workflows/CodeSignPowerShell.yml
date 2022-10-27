@@ -83,16 +83,17 @@ jobs:
           $uniqueEmails = $emails.split(" ") | Sort-Object | Get-Unique
 
           $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
+          $tenantID = (env.AzureTenantID | ConvertFrom-Json -AsHashtable)
     
           $tokenBody = @{
     
           Grant_Type    = 'client_credentials'
           Scope         = 'https://graph.microsoft.com/.default'
-          Client_Id     = ${{ env.AzureClientID }}
+          Client_Id     = ($env:AzureClientID | ConvertFrom-Json -AsHashtable)
           Client_Secret = $clientSecret
           }
     
-          $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/${{ env.AzureTenantID }}/oauth2/v2.0/token" -Method POST -Body $tokenBody -ErrorAction Stop
+          $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$tenantID/oauth2/v2.0/token" -Method POST -Body $tokenBody -ErrorAction Stop
     
           $headers = @{
     
