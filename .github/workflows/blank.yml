@@ -23,7 +23,7 @@ jobs:
         shell: powershell
         run: |
             $clientSecret = "hello"
-            $clientID = "$(env:AZUREKEYVAULTCLIENTID)"
+            $clientID = "${{ secrets.AZUREKEYVAULTCLIENTID }}"
             $tokenBody = @{
     
               Grant_Type    = 'client_credentials'
