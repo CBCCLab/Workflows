@@ -6,10 +6,6 @@ permissions:
 
 on:
   workflow_call:
-    inputs:
-      pr_login:
-        required: true
-        type: string
 
 jobs:
   sign_scripts:
@@ -38,7 +34,6 @@ jobs:
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
-          Write-Host ${{ inputs.pr_login }}
           $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           #Get differences between last commit and this one.
           $diff = git diff --name-only --diff-filter=AMR ${{github.event.before}} ${{github.sha}}
@@ -72,6 +67,63 @@ jobs:
             {
               Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
             }
+          }
+          
+      # Collect PowerShell scripts and sign.
+      - name: Send Emails
+        shell: powershell
+        run: |
+          $emails = git log --format='%ae' ${{github.sha}}
+          
+          $uniqueEmails = $emails.split(" ") | Sort-Object | Get-Unique
+
+          $clientID = ${{ secrets.AzureKeyVaultClientId }}
+          $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
+          $tenantID = ${{ secrets.AzureKeyVaultTenant }}
+    
+          $tokenBody = @{
+    
+          Grant_Type    = 'client_credentials'
+          Scope         = 'https://graph.microsoft.com/.default'
+          Client_Id     = $clientID
+          Client_Secret = $clientSecret
+          }
+    
+          $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$tenantID/oauth2/v2.0/token" -Method POST -Body $tokenBody -ErrorAction Stop
+    
+          $headers = @{
+    
+              "Authorization" = "Bearer $($tokenResponse.access_token)"
+               "Content-Type"  = "application/json"
+          }
+
+          $MsgFrom = “AdeleV@l8qp.onmicrosoft.com”
+
+          ForEach ($email in $uniqueEmails) 
+          {
+            $MsgSubject = "Code Signing Completed"
+
+            $MessageParams = @{
+                "URI"         = "https://graph.microsoft.com/v1.0/users/$MsgFrom/sendMail"
+                    "Headers"     = $headers
+                "Method"      = "POST"
+                "ContentType" = 'application/json'
+                "Body" = (@{
+                            "message" = @{
+                                        "subject" = $MsgSubject
+                                        "body"    = @{
+                                        "contentType" = 'HTML' 
+                                        "content"     = "<p><b>Your code has been signed.</b></p>" 
+                                        }
+                            "toRecipients" = @(
+                                            @{
+                                                "emailAddress" = @{"address" = $email }
+                                            })        
+                                        }
+                }) | ConvertTo-JSON -Depth 6
+           }   
+           # Send the message
+           Invoke-RestMethod @Messageparams
           }
           
       # Publish the signed .ps1 files as an artifact.
