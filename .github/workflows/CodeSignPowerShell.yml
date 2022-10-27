@@ -69,7 +69,7 @@ jobs:
             New-Item -Path 'SignedCodeDownload' -ItemType Directory -ErrorAction SilentlyContinue
             ForEach($file in $signedCode)
             {
-              Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
+              Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\" -ErrorAction SilentlyContinue
             }
           }
           
