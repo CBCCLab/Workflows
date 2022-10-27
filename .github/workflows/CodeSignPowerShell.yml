@@ -83,7 +83,7 @@ jobs:
           $uniqueEmails = $emails.split(" ") | Sort-Object | Get-Unique
 
           $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
-          $tenantID = (env.AzureTenantID | ConvertFrom-Json -AsHashtable)
+          $tenantID = ($env.AzureTenantID | ConvertFrom-Json -AsHashtable)
     
           $tokenBody = @{
     
