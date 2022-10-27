@@ -34,7 +34,8 @@ jobs:
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
-          Write-Host ${{ github.event.pusher.name }}
+          $email = git log -n 1 --pretty=format:%ae
+          Write-Host $email
           $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           #Get differences between last commit and this one.
           $diff = git diff --name-only --diff-filter=AMR ${{github.event.before}} ${{github.sha}}
