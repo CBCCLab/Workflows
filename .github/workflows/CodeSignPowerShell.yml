@@ -34,7 +34,7 @@ jobs:
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
-          $email = git log --format='%ae' ${{github.sha}}
+          $email = git log --format='%ae' ${{github.sha}} --first-parent
           Write-Host $email
           $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           #Get differences between last commit and this one.
