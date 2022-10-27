@@ -5,7 +5,11 @@ permissions:
   contents: read
 
 on:
-  workflow_call
+  workflow_call:
+    inputs:
+      pr_login:
+        required: true
+        type: string
 
 jobs:
   sign_scripts:
@@ -20,22 +24,22 @@ jobs:
           fetch-depth: 2
         
       # Install AzureSignTool
-      #- name: Install AzureSignTool
-      #  run: dotnet tool install --global AzureSignTool
+      - name: Install AzureSignTool
+        run: dotnet tool install --global AzureSignTool
         
-      #- name: Azure CLI Login
-      #  uses: azure/login@v1
-      #  with:
-      #    client-id: ${{ secrets.AzureKeyVaultClientId }}
-      #    tenant-id: ${{ secrets.AzureKeyVaultTenant }}
-      #    subscription-id: ${{ secrets.AzureSubscriptionId }}
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AzureKeyVaultClientId }}
+          tenant-id: ${{ secrets.AzureKeyVaultTenant }}
+          subscription-id: ${{ secrets.AzureSubscriptionId }}
 
       # Collect PowerShell scripts and sign.
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
-          git log > log.txt
-          #$secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
+          Write-Host ${{ inputs.pr_login }}
+          $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           #Get differences between last commit and this one.
           $diff = git diff --name-only --diff-filter=AMR ${{github.event.before}} ${{github.sha}}
           #Only add .ps1 files to FileToSign.txt
@@ -47,7 +51,7 @@ jobs:
             try 
             {
               # Use AzureSignTool to sign the files in FilesToSign.txt
-              #& AzureSignTool sign -kvt "${{ secrets.AzureKeyVaultTenant }}" -kvu "${{ secrets.AzureKeyVaultUrl }}" -kvi "${{ secrets.AzureKeyVaultClientId }}" -kvs $secretVar -kvc "${{ secrets.AzureCertName }}" -tr http://timestamp.digicert.com -v -ifl FilesToSign.txt
+              & AzureSignTool sign -kvt "${{ secrets.AzureKeyVaultTenant }}" -kvu "${{ secrets.AzureKeyVaultUrl }}" -kvi "${{ secrets.AzureKeyVaultClientId }}" -kvs $secretVar -kvc "${{ secrets.AzureCertName }}" -tr http://timestamp.digicert.com -v -ifl FilesToSign.txt
             }
             catch
             {
@@ -68,7 +72,6 @@ jobs:
             {
               Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
             }
-            Move-Item -Path log.txt -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
           }
           
       # Publish the signed .ps1 files as an artifact.
