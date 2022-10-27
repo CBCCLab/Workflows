@@ -34,11 +34,8 @@ jobs:
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
-          $email = git log --format='%ae' ${{github.sha}}
           git log > log.txt
-          Move-Item -Path log.txt -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
-          Write-Host $email
-          $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
+          #$secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           #Get differences between last commit and this one.
           $diff = git diff --name-only --diff-filter=AMR ${{github.event.before}} ${{github.sha}}
           #Only add .ps1 files to FileToSign.txt
@@ -66,11 +63,12 @@ jobs:
           
           if ($signedCode)
           {
-            New-Item -Path 'SignedCodeDownload' -ItemType Directory -ErrorAction SilentlyContinue
+            New-Item -Path 'SignedCodeDownload' -ItemType Directory
             ForEach($file in $signedCode)
             {
-              Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\" -ErrorAction SilentlyContinue
+              Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
             }
+            Move-Item -Path log.txt -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
           }
           
       # Publish the signed .ps1 files as an artifact.
@@ -78,5 +76,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: SignedCode
-          path: ${{ github.workspace }}/SignedCodeDownload/*
+          path: ${{ github.workspace }}\SignedCodeDownload\*
           if-no-files-found: ignore
