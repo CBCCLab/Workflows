@@ -74,7 +74,7 @@ jobs:
       - name: Send Emails
         shell: powershell
         run: |
-          $emails = git log --format='%ae' ${{github.sha}}
+          $emails = git log --format='%ae' ${{github.sha}} --no-merges
           
           $uniqueEmails = $emails.split(" ") | Sort-Object | Get-Unique
 
