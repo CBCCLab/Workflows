@@ -23,18 +23,18 @@ jobs:
       #- name: Install AzureSignTool
       #  run: dotnet tool install --global AzureSignTool
         
-      - name: Azure CLI Login
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AzureKeyVaultClientId }}
-          tenant-id: ${{ secrets.AzureKeyVaultTenant }}
-          subscription-id: ${{ secrets.AzureSubscriptionId }}
+      #- name: Azure CLI Login
+      #  uses: azure/login@v1
+      #  with:
+      #    client-id: ${{ secrets.AzureKeyVaultClientId }}
+      #    tenant-id: ${{ secrets.AzureKeyVaultTenant }}
+      #    subscription-id: ${{ secrets.AzureSubscriptionId }}
 
       # Collect PowerShell scripts and sign.
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
-          $email = git log -n 1 --pretty=format:%ae
+          $email = git log --format='%ae' ${{github.sha}}
           Write-Host $email
           $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           #Get differences between last commit and this one.
