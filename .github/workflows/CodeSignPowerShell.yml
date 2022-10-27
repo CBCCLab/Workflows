@@ -6,6 +6,10 @@ permissions:
 
 on:
   workflow_call:
+  
+env:
+  AzureClientID: ${{ secrets.AzureKeyVaultClientId }}
+  AzureTenantID: ${{ secrets.AzureKeyVaultTenant }}
 
 jobs:
   sign_scripts:
@@ -34,6 +38,7 @@ jobs:
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
+          Write-Host ${{github.event.pull_request.user.login}}
           $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           #Get differences between last commit and this one.
           $diff = git diff --name-only --diff-filter=AMR ${{github.event.before}} ${{github.sha}}
@@ -77,19 +82,17 @@ jobs:
           
           $uniqueEmails = $emails.split(" ") | Sort-Object | Get-Unique
 
-          $clientID = ${{ secrets.AzureKeyVaultClientId }}
           $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
-          $tenantID = ${{ secrets.AzureKeyVaultTenant }}
     
           $tokenBody = @{
     
           Grant_Type    = 'client_credentials'
           Scope         = 'https://graph.microsoft.com/.default'
-          Client_Id     = $clientID
+          Client_Id     = ${{ env.AzureClientID }}
           Client_Secret = $clientSecret
           }
     
-          $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$tenantID/oauth2/v2.0/token" -Method POST -Body $tokenBody -ErrorAction Stop
+          $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/${{ env.AzureTenantID }}/oauth2/v2.0/token" -Method POST -Body $tokenBody -ErrorAction Stop
     
           $headers = @{
     
