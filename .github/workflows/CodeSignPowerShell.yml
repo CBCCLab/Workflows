@@ -69,16 +69,7 @@ jobs:
               Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
             }
           }
-        
-              # Runs a single command using the runners shell
-      - name: API Test
-        
-        shell: powershell
-        run: |
-            
-            
-           
-        
+
       # Send emails.
       - name: Send Emails
         env:
