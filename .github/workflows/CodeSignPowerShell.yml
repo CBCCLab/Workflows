@@ -86,8 +86,9 @@ jobs:
         shell: powershell
         run: |
           $pullRequest = gh api -H "Accept: application/vnd.github+json" --method GET repos/${{ github.repository }}/pulls -F per_page=50 -f sort=created -f direction=desc -f state=closed | ConvertFrom-Json
-          $requester = $parsed_json | Where-Object {$_.merge_commit_sha -eq "${{github.sha}}"}
-          $user = gh api -H "Accept: application/vnd.github+json" --method GET users/$requester.user.login | ConvertFrom-Json
+          $requester = $pullRequest | Where-Object {$_.merge_commit_sha -eq "${{github.sha}}"}
+          $username = $requester.user.login
+          $user = gh api -H "Accept: application/vnd.github+json" --method GET users/$username | ConvertFrom-Json
           $emailAddress = $user.email
           
           $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
