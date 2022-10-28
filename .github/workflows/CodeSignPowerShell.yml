@@ -2,7 +2,7 @@ name: SignCode Remote
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 on:
   workflow_call:
