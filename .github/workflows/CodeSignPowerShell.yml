@@ -1,8 +1,6 @@
 name: SignCode Remote
 
-permissions:
-  id-token: write
-  contents: write
+permissions: read-all|write-all
 
 on:
   workflow_call:
