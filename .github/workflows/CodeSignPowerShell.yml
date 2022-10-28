@@ -88,8 +88,13 @@ jobs:
           $pullRequest = gh api -H "Accept: application/vnd.github+json" --method GET repos/${{ github.repository }}/pulls -F per_page=50 -f sort=created -f direction=desc -f state=closed | ConvertFrom-Json
           $requester = $pullRequest | Where-Object {$_.merge_commit_sha -eq "${{github.sha}}"}
           $username = $requester.user.login
-          $user = gh api -H "Accept: application/vnd.github+json" --method GET users/$username | ConvertFrom-Json
-          $emailAddress = $user.email
+          
+          switch ($username)
+            {
+              "CCColinBailey" {$emailAddress = "colin.bailey@contentandcloud.com"}
+              "MavranicTest" {$emailAddress = "ccmipdemo@gmail.com"}
+              "Mavranic" {$emailAddress = "bailey.colin@live.co.uk"}
+            }
           
           $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           $tenantID = "${{ secrets.AzureKeyVaultTenant }}"
