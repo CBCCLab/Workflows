@@ -69,15 +69,27 @@ jobs:
               Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
             }
           }
-          
-      # Collect PowerShell scripts and sign.
-      - name: Send Emails
+        
+              # Runs a single command using the runners shell
+      - name: API Test
+        
         shell: powershell
         run: |
-          $emails = git log --format='%ae' ${{github.sha}} --no-merges
+            
+            
+           
+        
+      # Send emails.
+      - name: Send Emails
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: powershell
+        run: |
+          $pullRequest = gh api -H "Accept: application/vnd.github+json" --method GET repos/${{ github.repository }}/pulls -F per_page=50 -f sort=created -f direction=desc -f state=closed | ConvertFrom-Json
+          $requester = $parsed_json | Where-Object {$_.merge_commit_sha -eq "${{github.sha}}"}
+          $user = gh api -H "Accept: application/vnd.github+json" --method GET users/$requester.user.login | ConvertFrom-Json
+          $emailAddress = $user.email
           
-          $uniqueEmails = $emails.split(" ") | Sort-Object | Get-Unique
-
           $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           $tenantID = "${{ secrets.AzureKeyVaultTenant }}"
           $clientID = "${{ secrets.AZUREKEYVAULTCLIENTID }}"
@@ -100,8 +112,6 @@ jobs:
 
           $MsgFrom = "AdeleV@l8qp.onmicrosoft.com"
 
-          ForEach ($email in $uniqueEmails) 
-          {
             $MsgSubject = "Code Signing Completed"
 
             $MessageParams = @{
@@ -118,14 +128,13 @@ jobs:
                                         }
                             "toRecipients" = @(
                                             @{
-                                                "emailAddress" = @{"address" = $email }
+                                                "emailAddress" = @{"address" = $emailAddress }
                                             })        
                                         }
                 }) | ConvertTo-JSON -Depth 6
            }   
            # Send the message
            Invoke-RestMethod @Messageparams
-          }
           
       # Publish the signed .ps1 files as an artifact.
       - name: Publish artifacts
