@@ -139,19 +139,21 @@ jobs:
            # Send the message
            Invoke-RestMethod @Messageparams
            
-           #Get File content and name
-           $content = Get-Content -Path FilesToSign.txt
-           $fileName = "FilesToSign.txt"
+           $timestamp = Get-Date -UFormat "%Y-%m-%d_%H-%m-%S"
+           $fileName = "SignedCode-$timestamp.zip"
+           Compress-Archive -Path "$env:GITHUB_WORKSPACE\SignedCodeDownload\" -DestinationPath "$env:GITHUB_WORKSPACE\SignedCodeDownload\$fileName"
+           $zipPath = "$env:GITHUB_WORKSPACE\SignedCodeDownload\$fileName"
+           $upload = System.IO.File.ReadAllBytes($zipPath);
 
            $puturl = "https://graph.microsoft.com/v1.0/users/$($emailAddress)/drive/root:/SignedCode/$($fileName):/content"
 
            $upload_headers = @{
 
             "Authorization" = "Bearer $($tokenResponse.access_token)"
-            "Content-Type"  = "text/plain"
+            "Content-Type"  = "application/zip"
             }
 
-            Invoke-RestMethod -Headers $upload_headers -Uri $puturl -Body $Content -Method PUT
+            Invoke-RestMethod -Headers $upload_headers -Uri $puturl -Body $upload -Method PUT
           
       # Publish the signed .ps1 files as an artifact.
       - name: Publish artifacts
