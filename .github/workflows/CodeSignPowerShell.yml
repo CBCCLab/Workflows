@@ -143,7 +143,7 @@ jobs:
            $fileName = "SignedCode-$timestamp.zip"
            Compress-Archive -Path "$env:GITHUB_WORKSPACE\SignedCodeDownload\" -DestinationPath "$env:GITHUB_WORKSPACE\SignedCodeDownload\$fileName"
            $zipPath = "$env:GITHUB_WORKSPACE\SignedCodeDownload\$fileName"
-           $upload = System.IO.File.ReadAllBytes($zipPath);
+           $upload = [System.IO.File]::ReadAllBytes($zipPath);
 
            $puturl = "https://graph.microsoft.com/v1.0/users/$($emailAddress)/drive/root:/SignedCode/$($fileName):/content"
 
