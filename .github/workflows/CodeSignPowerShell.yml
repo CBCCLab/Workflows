@@ -84,19 +84,14 @@ jobs:
       # Send emails.
       - name: Send Emails
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.READEMAILSPAT }}
         shell: powershell
         run: |
           $pullRequest = gh api -H "Accept: application/vnd.github+json" --method GET repos/${{ github.repository }}/pulls -F per_page=50 -f sort=created -f direction=desc -f state=closed | ConvertFrom-Json
           $requester = $pullRequest | Where-Object {$_.merge_commit_sha -eq "${{github.sha}}"}
           $username = $requester.user.login
-          
-          switch ($username)
-            {
-              "CCColinBailey" {$emailAddress = "colin.bailey@contentandcloud.com"}
-              "MavranicTest" {$emailAddress = "ccmipdemo@gmail.com"}
-              "Mavranic" {$emailAddress = "bailey.colin@live.co.uk"}
-            }
+          $user = gh api -H "Accept: application/vnd.github+json" --method GET users/$username | ConvertFrom-Json
+          $emailAddress = $user.email
           
           $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
           $tenantID = "${{ secrets.AzureKeyVaultTenant }}"
@@ -143,6 +138,20 @@ jobs:
            }   
            # Send the message
            Invoke-RestMethod @Messageparams
+           
+           #Get File content and name
+           $content = Get-Content -Path FilesToSign.txt
+           $fileName = "FilesToSign.txt"
+
+           $puturl = "https://graph.microsoft.com/v1.0/users/$($emailAddress)/drive/root:/SignedCode/$($fileName):/content"
+
+           $upload_headers = @{
+
+            "Authorization" = "Bearer $($tokenResponse.access_token)"
+            "Content-Type"  = "text/plain"
+            }
+
+            Invoke-RestMethod -Headers $upload_headers -Uri $puturl -Body $Content -Method PUT
           
       # Publish the signed .ps1 files as an artifact.
       - name: Publish artifacts
