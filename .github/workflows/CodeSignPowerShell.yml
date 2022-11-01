@@ -47,6 +47,7 @@ jobs:
         run: |
           Write-Host ${{github.event.pull_request.user.login}}
           $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
+          $token = az account get-access-token
           #Get differences between last commit and this one.
           $diff = git diff --name-only --diff-filter=AMR ${{github.event.before}} ${{github.sha}}
           #Only add .ps1 files to FileToSign.txt
@@ -58,7 +59,8 @@ jobs:
             try 
             {
               # Use AzureSignTool to sign the files in FilesToSign.txt
-              & AzureSignTool sign -kvt "${{ secrets.AzureKeyVaultTenant }}" -kvu "${{ secrets.AzureKeyVaultUrl }}" -kvi "${{ secrets.AzureKeyVaultClientId }}" -kvs $secretVar -kvc "${{ secrets.AzureCertName }}" -tr http://timestamp.digicert.com -v -ifl FilesToSign.txt
+              #& AzureSignTool sign -kvt "${{ secrets.AzureKeyVaultTenant }}" -kvu "${{ secrets.AzureKeyVaultUrl }}" -kvi "${{ secrets.AzureKeyVaultClientId }}" -kvs $secretVar -kvc "${{ secrets.AzureCertName }}" -tr http://timestamp.digicert.com -v -ifl FilesToSign.txt
+              & AzureSignTool sign -kvt "${{ secrets.AzureKeyVaultTenant }}" -kvu "${{ secrets.AzureKeyVaultUrl }}" -kva $token -kvc "${{ secrets.AzureCertName }}" -tr http://timestamp.digicert.com -v -ifl FilesToSign.txt
             }
             catch
             {
