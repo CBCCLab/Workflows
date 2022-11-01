@@ -47,7 +47,7 @@ jobs:
         run: |
           Write-Host ${{github.event.pull_request.user.login}}
           $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
-          $token = az account get-access-token --query "accessToken" --output tsv
+          $token = az account get-access-token --resource ${{ secrets.AzureKeyVaultClientId }} --scope https://vault.azure.net --query "accessToken" --output tsv
           #Get differences between last commit and this one.
           $diff = git diff --name-only --diff-filter=AMR ${{github.event.before}} ${{github.sha}}
           #Only add .ps1 files to FileToSign.txt
