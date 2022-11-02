@@ -1,19 +1,8 @@
 name: SignCode Remote
 
 permissions:
-  actions: write
-  checks: write
-  contents: write
-  deployments: write
+  contents: read
   id-token: write
-  issues: write
-  discussions: write
-  packages: write
-  pages: write
-  pull-requests: write
-  repository-projects: write
-  security-events: write
-  statuses: write
 
 on:
   workflow_call:
@@ -45,8 +34,7 @@ jobs:
       - name: Sign Changed PowerShell Scripts
         shell: powershell
         run: |
-          Write-Host ${{github.event.pull_request.user.login}}
-          $secretVar = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
+          # Get an access token for the Azure Sign Tool to use
           $token = az account get-access-token --resource ${{ secrets.AzureKeyVaultClientId }} --scope https://vault.azure.net/.default --query "accessToken" --output tsv
           #Get differences between last commit and this one.
           $diff = git diff --name-only --diff-filter=AMR ${{github.event.before}} ${{github.sha}}
@@ -59,7 +47,6 @@ jobs:
             try 
             {
               # Use AzureSignTool to sign the files in FilesToSign.txt
-              #& AzureSignTool sign -kvt "${{ secrets.AzureKeyVaultTenant }}" -kvu "${{ secrets.AzureKeyVaultUrl }}" -kvi "${{ secrets.AzureKeyVaultClientId }}" -kvs $secretVar -kvc "${{ secrets.AzureCertName }}" -tr http://timestamp.digicert.com -v -ifl FilesToSign.txt
               & AzureSignTool sign -kvt "${{ secrets.AzureKeyVaultTenant }}" -kvu "${{ secrets.AzureKeyVaultUrl }}" -kva "$token" -kvc "${{ secrets.AzureCertName }}" -tr http://timestamp.digicert.com -v -ifl FilesToSign.txt
             }
             catch
@@ -82,80 +69,6 @@ jobs:
               Move-Item -Path $file -Destination "$env:GITHUB_WORKSPACE\SignedCodeDownload\"
             }
           }
-
-      # Send emails.
-      - name: Send Emails
-        env:
-          GH_TOKEN: ${{ secrets.READEMAILSPAT }}
-        shell: powershell
-        run: |
-          $pullRequest = gh api -H "Accept: application/vnd.github+json" --method GET repos/${{ github.repository }}/pulls -F per_page=50 -f sort=created -f direction=desc -f state=closed | ConvertFrom-Json
-          $requester = $pullRequest | Where-Object {$_.merge_commit_sha -eq "${{github.sha}}"}
-          $username = $requester.user.login
-          $user = gh api -H "Accept: application/vnd.github+json" --method GET users/$username | ConvertFrom-Json
-          $emailAddress = $user.email
-          
-          $clientSecret = az keyvault secret show --id ${{ secrets.AzureKeyVaultSecretID }} --query value -o tsv
-          $tenantID = "${{ secrets.AzureKeyVaultTenant }}"
-          $clientID = "${{ secrets.AZUREKEYVAULTCLIENTID }}"
-    
-          $tokenBody = @{
-    
-          Grant_Type    = 'client_credentials'
-          Scope         = 'https://graph.microsoft.com/.default'
-          Client_Id     = "${{ secrets.AZUREKEYVAULTCLIENTID }}"
-          Client_Secret = $clientSecret
-          }
-    
-          $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$tenantID/oauth2/v2.0/token" -Method POST -Body $tokenBody -ErrorAction Stop
-    
-          $headers = @{
-    
-              "Authorization" = "Bearer $($tokenResponse.access_token)"
-               "Content-Type"  = "application/json"
-          }
-
-          $MsgFrom = "AdeleV@l8qp.onmicrosoft.com"
-
-            $MsgSubject = "Code Signing Completed"
-
-            $MessageParams = @{
-                "URI"         = "https://graph.microsoft.com/v1.0/users/$MsgFrom/sendMail"
-                    "Headers"     = $headers
-                "Method"      = "POST"
-                "ContentType" = 'application/json'
-                "Body" = (@{
-                            "message" = @{
-                                        "subject" = $MsgSubject
-                                        "body"    = @{
-                                        "contentType" = 'HTML' 
-                                        "content"     = "<p><b>Your code has been signed.</b></p>" 
-                                        }
-                            "toRecipients" = @(
-                                            @{
-                                                "emailAddress" = @{"address" = $emailAddress }
-                                            })        
-                                        }
-                }) | ConvertTo-JSON -Depth 6
-           }   
-           # Send the message
-           Invoke-RestMethod @Messageparams
-           
-           $timestamp = Get-Date -UFormat "%Y-%m-%d_%H-%m-%S"
-           $fileName = "SignedCode-$timestamp.zip"
-           Compress-Archive -Path "$env:GITHUB_WORKSPACE\SignedCodeDownload\" -DestinationPath "$env:GITHUB_WORKSPACE\SignedCodeDownload\$fileName"
-           $zipPath = "$env:GITHUB_WORKSPACE\SignedCodeDownload\$fileName"
-           $upload = [System.IO.File]::ReadAllBytes($zipPath);
-
-           $puturl = "https://graph.microsoft.com/v1.0/users/$($emailAddress)/drive/root:/SignedCode/$($fileName):/content"
-
-           $upload_headers = @{
-
-            "Authorization" = "Bearer $($tokenResponse.access_token)"
-            "Content-Type"  = "application/zip"
-            }
-
-            Invoke-RestMethod -Headers $upload_headers -Uri $puturl -Body $upload -Method PUT
           
       # Publish the signed .ps1 files as an artifact.
       - name: Publish artifacts
